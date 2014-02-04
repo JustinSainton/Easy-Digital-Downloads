@@ -209,8 +209,9 @@ function edd_reports_graph_of_download( $download_id = 0 ) {
 		case 'this_quarter' :
 			$day_by_day = false;
 			break;
+		/* TODO: This is broken.  Other ranges get pretty borked.  Need to determine actual time difference. */
 		case 'other' :
-			if( ( $dates['m_end'] - $dates['m_start'] ) >= 2 ) {
+			if ( ( $dates['m_end'] - $dates['m_start'] ) >= 2 ) {
 				$day_by_day = false;
 			} else {
 				$day_by_day = true;
@@ -221,12 +222,12 @@ function edd_reports_graph_of_download( $download_id = 0 ) {
 			break;
 	endswitch;
 
-	$earnings_totals = (float) 0.00; // Total earnings for time period shown
-	$sales_totals    = 0;            // Total sales for time period shown
+	$earnings_totals = 0.00; // Total earnings for time period shown
+	$sales_totals    = 0;    // Total sales for time period shown
 
 	$earnings_data = array();
 	$sales_data    = array();
-	$stats          = new EDD_Payment_Stats;
+	$stats         = new EDD_Payment_Stats;
 
 	if( $dates['range'] == 'today' || $dates['range'] == 'yesterday' ) {
 		// Hour by hour

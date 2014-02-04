@@ -38,7 +38,7 @@ class EDD_Payment_Stats extends EDD_Stats {
 		$this->setup_dates( $start_date, $end_date );
 
 		// Make sure start date is valid
-		if( is_wp_error( $this->start_date ) )
+		if ( is_wp_error( $this->start_date ) )
 			return $this->start_date;
 
 		// Make sure end date is valid
@@ -78,7 +78,6 @@ class EDD_Payment_Stats extends EDD_Stats {
 
 	}
 
-
 	/**
 	 * Retrieve earning stats
 	 *
@@ -91,12 +90,10 @@ class EDD_Payment_Stats extends EDD_Stats {
 	 */
 	public function get_earnings( $download_id = 0, $start_date = false, $end_date = false ) {
 
-		global $wpdb;
-
 		$this->setup_dates( $start_date, $end_date );
 
 		// Make sure start date is valid
-		if( is_wp_error( $this->start_date ) )
+		if ( is_wp_error( $this->start_date ) )
 			return $this->start_date;
 
 		// Make sure end date is valid
@@ -107,10 +104,9 @@ class EDD_Payment_Stats extends EDD_Stats {
 
 		add_filter( 'posts_where', array( $this, 'payments_where' ) );
 
-		if( empty( $download_id ) ) {
+		if ( empty( $download_id ) ) {
 
 			// Global earning stats
-
 			$args = array(
 				'post_type'              => 'edd_payment',
 				'nopaging'               => true,
@@ -131,8 +127,123 @@ class EDD_Payment_Stats extends EDD_Stats {
 				$sales = get_posts( $args );
 				$earnings = 0;
 				if ( $sales ) {
-					$sales = implode( ',', $sales );
-					$earnings += $wpdb->get_var( "SELECT SUM(meta_value) FROM $wpdb->postmeta WHERE meta_key = '_edd_payment_total' AND post_id IN({$sales})" );
+					foreach ( $sales as $sale ) {
+						$amount    = edd_get_payment_amount( $sale );
+						$earnings  = floatval( $earnings ) +  floatval( $amount );
+					}
+				}
+				// Cache the results for one hour
+				set_transient( $key, $earnings, 60*60 );
+			}
+
+		} else {
+
+			// Download specific earning stats
+
+			global $edd_logs, $wpdb;
+
+			$args = array(
+				'post_parent'      => $download_id,
+				'nopaging'         => true,
+				'log_type'         => 'sale',
+				'fields'           => 'ids',
+				'suppress_filters' => false,
+				'start_date'       => $this->start_date, // These dates are not valid query args, but they are used for cache keys
+				'end_date'         => $this->end_date
+			);
+
+			$args = apply_filters( 'edd_stats_earnings_args', $args );
+			$key  = md5( serialize( $args ) );
+
+			$earnings = get_transient( $key );
+			
+			if( false === $earnings ) {
+
+				$log_ids  = $edd_logs->get_connected_logs( $args, 'sale' );
+				$earnings = 0;
+
+				if( $log_ids ) {
+					$log_ids     = implode( ',', $log_ids );
+					$payment_ids = $wpdb->get_col( "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key='_edd_log_payment_id' AND post_id IN ($log_ids);" );
+
+					foreach( $payment_ids as $payment_id ) {
+						$items = edd_get_payment_meta_cart_details( $payment_id );
+						foreach( $items as $item ) {
+							if( $item['id'] != $download_id )
+								continue;
+
+							$earnings += $item['price'];
+						}
+					}
+				}
+
+				// Cache the results for one hour
+				set_transient( $key, $earnings, 60 * 60 );
+			}
+		}
+
+		remove_filter( 'posts_where', array( $this, 'payments_where' ) );
+
+		return round( $earnings, 2 );
+
+	}
+
+	/**
+	 * Retrieve earning stats from a range of dates.
+	 *
+	 * @access public
+	 * @since 1.9.5
+	 * 
+	 * @param $download_id int The download product to retrieve stats for. If false, gets stats for all products
+	 * @param $start_date string|bool The starting date for which we'd like to filter our sale stats. If false, we'll use the default start date of `this_month`
+	 * @param $end_date string|bool The end date for which we'd like to filter our sale stats. If false, we'll use the default end date of `this_month`
+	 * @param $points int Each specified range will have a determined amount of points that should be plotted.
+	 * 
+	 * @return array
+	 */
+	public function get_earnings_range( $download_id, $start_date, $end_date, $points ) {
+
+		$this->setup_dates( $start_date, $end_date );
+
+		// Make sure start date is valid
+		if ( is_wp_error( $this->start_date ) )
+			return $this->start_date;
+
+		// Make sure end date is valid
+		if( is_wp_error( $this->end_date ) )
+			return $this->end_date;
+
+		$earnings = 0;
+
+		add_filter( 'posts_where', array( $this, 'payments_where' ) );
+
+		if ( empty( $download_id ) ) {
+
+			// Global earning stats
+			$args = array(
+				'post_type'              => 'edd_payment',
+				'nopaging'               => true,
+				'post_status'            => array( 'publish', 'revoked' ),
+				'fields'                 => 'ids',
+				'update_post_term_cache' => false,
+				'suppress_filters'       => false,
+				'start_date'             => $this->start_date, // These dates are not valid query args, but they are used for cache keys
+				'end_date'               => $this->end_date
+			);
+
+			$args = apply_filters( 'edd_stats_earnings_range_args', $args );
+
+			$key = md5( 'edd_earnings_range_' . $start_date . $start_date );
+			$earnings = get_transient( $key );
+
+			if( false === $earnings ) {
+				$sales = get_posts( $args );
+				$earnings = 0;
+				if ( $sales ) {
+					foreach ( $sales as $sale ) {
+						$amount    = edd_get_payment_amount( $sale );
+						$earnings  = floatval( $earnings ) +  floatval( $amount );
+					}
 				}
 				// Cache the results for one hour
 				set_transient( $key, $earnings, 60*60 );
@@ -179,14 +290,13 @@ class EDD_Payment_Stats extends EDD_Stats {
 				}
 
 				// Cache the results for one hour
-				set_transient( $key, $earnings, 60*60 );
+				set_transient( $key, $earnings, 60 * 60 );
 			}
 		}
 
 		remove_filter( 'posts_where', array( $this, 'payments_where' ) );
 
 		return round( $earnings, 2 );
-
 	}
 
 	/**
