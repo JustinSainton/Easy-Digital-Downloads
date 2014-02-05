@@ -83,22 +83,27 @@ class EDD_Payment_Stats extends EDD_Stats {
 	 *
 	 * @access public
 	 * @since 1.8
-	 * @param $download_id INT The download product to retrieve stats for. If false, gets stats for all products
-	 * @param $start_date string|bool The starting date for which we'd like to filter our sale stats. If false, we'll use the default start date of `this_month`
-	 * @param $end_date string|bool The end date for which we'd like to filter our sale stats. If false, we'll use the default end date of `this_month`
+	 * 
+	 * @param $download_id int         The download product to retrieve stats for. If false, gets stats for all products
+	 * @param $start_date  string|bool The starting date for which we'd like to filter our sale stats. If false, we'll use the default start date of `this_month`
+	 * @param $end_date    string|bool The end date for which we'd like to filter our sale stats. If false, we'll use the default end date of `this_month`
+	 * @param $day_by_day  int         Step by step.  Day by day by day, a fresh start over...
+	 * 
 	 * @return float|int
 	 */
-	public function get_earnings( $download_id = 0, $start_date = false, $end_date = false ) {
+	public function get_earnings( $download_id = 0, $start_date = false, $end_date = false, $day_by_day = false ) {
 
 		$this->setup_dates( $start_date, $end_date );
 
 		// Make sure start date is valid
-		if ( is_wp_error( $this->start_date ) )
+		if ( is_wp_error( $this->start_date ) ) {
 			return $this->start_date;
+		}
 
 		// Make sure end date is valid
-		if( is_wp_error( $this->end_date ) )
+		if ( is_wp_error( $this->end_date ) ) {
 			return $this->end_date;
+		}
 
 		$earnings = 0;
 
@@ -123,7 +128,7 @@ class EDD_Payment_Stats extends EDD_Stats {
 			$key = md5( 'edd_earnings_' . $start_date . $start_date );
 			$earnings = get_transient( $key );
 
-			if( false === $earnings ) {
+			if ( false === $earnings ) {
 				$sales = get_posts( $args );
 				$earnings = 0;
 				if ( $sales ) {
@@ -157,7 +162,7 @@ class EDD_Payment_Stats extends EDD_Stats {
 
 			$earnings = get_transient( $key );
 			
-			if( false === $earnings ) {
+			if ( false === $earnings ) {
 
 				$log_ids  = $edd_logs->get_connected_logs( $args, 'sale' );
 				$earnings = 0;
@@ -197,11 +202,11 @@ class EDD_Payment_Stats extends EDD_Stats {
 	 * @param $download_id int The download product to retrieve stats for. If false, gets stats for all products
 	 * @param $start_date string|bool The starting date for which we'd like to filter our sale stats. If false, we'll use the default start date of `this_month`
 	 * @param $end_date string|bool The end date for which we'd like to filter our sale stats. If false, we'll use the default end date of `this_month`
-	 * @param $points int Each specified range will have a determined amount of points that should be plotted.
+	 * @param $day_by_day  int         Step by step.  Day by day by day, a fresh start over...
 	 * 
 	 * @return array
 	 */
-	public function get_earnings_range( $download_id, $start_date, $end_date, $points ) {
+	public function get_earnings_range( $download_id, $start_date, $end_date, $day_by_day = false ) {
 
 		$this->setup_dates( $start_date, $end_date );
 

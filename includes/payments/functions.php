@@ -821,8 +821,7 @@ function edd_payment_amount( $payment_id = 0 ) {
  *
  * @access public
  * @since 1.2
- * @param int $payment_id Payment ID
- * @return string $amount Payment amount
+ * @param int $payment_id Pay ing $amount Payment amount
  */
 function edd_get_payment_amount( $payment_id ) {
 	$amount = get_post_meta( $payment_id, '_edd_payment_total', true );
