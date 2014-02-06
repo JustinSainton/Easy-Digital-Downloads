@@ -211,7 +211,7 @@ function edd_reports_graph_of_download( $download_id = 0 ) {
 			break;
 		/* TODO: This is broken.  Other ranges get pretty borked.  Need to determine actual time difference. */
 		case 'other' :
-			if ( ( $dates['m_end'] - $dates['m_start'] ) >= 2 ) {
+			if( $dates['m_end'] - $dates['m_start'] >= 2 || $dates['year_end'] > $dates['year'] ) {
 				$day_by_day = false;
 			} else {
 				$day_by_day = true;
@@ -386,7 +386,7 @@ function edd_reports_graph_controls() {
 
 	$display = $dates['range'] == 'other' ? '' : 'style="display:none;"';
 
-	$view = isset( $_GET['view'] ) ? $_GET['view'] : 'earnings';
+	$view = edd_get_reporting_view();
 
 	?>
 	<form id="edd-graphs-filter" method="get">
@@ -395,7 +395,7 @@ function edd_reports_graph_controls() {
 
 		       	<input type="hidden" name="post_type" value="download"/>
 		       	<input type="hidden" name="page" value="edd-reports"/>
-		       	<input type="hidden" name="view" value="<?php echo $view; ?>"/>
+		       	<input type="hidden" name="view" value="<?php echo esc_attr( $view ); ?>"/>
 
 		       	<?php if( isset( $_GET['download-id'] ) ) : ?>
 		       		<input type="hidden" name="download-id" value="<?php echo absint( $_GET['download-id'] ); ?>"/>
@@ -462,9 +462,7 @@ function edd_get_report_dates() {
 	$dates['m_end']      = isset( $_GET['m_end'] )   ? $_GET['m_end']   : 12;
 	$dates['year']       = isset( $_GET['year'] )    ? $_GET['year']    : date( 'Y' );
 	$dates['year_end']   = isset( $_GET['year_end'] )? $_GET['year_end']: date( 'Y' );
-	
-	wp_reset_vars( array( 'range', 'day', 'm_start', 'm_end', 'year', 'year_end' ) );
-	
+		
 	// Modify dates based on predefined ranges
 	switch ( $dates['range'] ) :
 
@@ -621,9 +619,9 @@ function edd_get_report_dates() {
 function edd_parse_report_dates( $data ) {
 	$dates = edd_get_report_dates();
 
-	$view = isset( $_GET['view'] )        ? $_GET['view']        : 'earnings';
+	$view = edd_get_reporting_view();
 	$id   = isset( $_GET['download-id'] ) ? $_GET['download-id'] : null;
 
-	wp_redirect( add_query_arg( $dates, admin_url( 'edit.php?post_type=download&page=edd-reports&view=' . $view . '&download-id=' . $id ) ) ); edd_die();
+	wp_redirect( add_query_arg( $dates, admin_url( 'edit.php?post_type=download&page=edd-reports&view=' . esc_attr( $view ) . '&download-id=' . absint( $id ) ) ) ); edd_die();
 }
 add_action( 'edd_filter_reports', 'edd_parse_report_dates' );
